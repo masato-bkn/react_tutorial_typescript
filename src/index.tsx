@@ -18,55 +18,25 @@ const Square = (props: ISquare['props']) => {
 };
 
 interface IBoard {
-  state: {
+  props: {
     squares: Array<'x' | 'O' | null>;
-    xIsNext: boolean;
+    onClick: (i: number) => void;
   };
 }
 
-class Board extends React.Component<{}, IBoard['state']> {
-  constructor(props: {}) {
-    super(props);
-    this.state = {
-      squares: Array(9).fill(null),
-      xIsNext: true,
-    };
-  }
-
-  handleClick(i: number): void {
-    // .sliceで配列をコピーしてイミュータブルにする
-    const squares = this.state.squares.slice();
-    if (calculateWinner(squares) || squares[i]) {
-      return;
-    }
-    squares[i] = this.state.xIsNext ? 'x' : 'O';
-    this.setState({
-      squares: squares,
-      xIsNext: !this.state.xIsNext,
-    });
-  }
-
+class Board extends React.Component<IBoard['props']> {
   renderSquare(i: number): ReactElement {
     return (
       <Square
-        value={this.state.squares[i]}
-        onClick={() => this.handleClick(i)}
+        value={this.props.squares[i]}
+        onClick={() => this.props.onClick(i)}
       />
     );
   }
 
   render() {
-    const winner = calculateWinner(this.state.squares);
-    let status;
-    if (winner) {
-      status = `Winner: ${winner}`;
-    } else {
-      status = `Next player: ${this.state.xIsNext ? 'x' : 'O'}`;
-    }
-
     return (
       <div>
-        <div className="status">{status}</div>
         <div className="board-row">
           {this.renderSquare(0)}
           {this.renderSquare(1)}
@@ -87,27 +57,94 @@ class Board extends React.Component<{}, IBoard['state']> {
   }
 }
 
-class Game extends React.Component {
+interface IGame {
+  state: {
+    history: Array<{ squares: Array<SquareContent> }>;
+    xIsNext: boolean;
+    stepNumber: number;
+  };
+}
+type SquareContent = 'x' | 'O' | null;
+
+class Game extends React.Component<{}, IGame['state']> {
+  constructor(props: {}) {
+    super(props);
+    this.state = {
+      history: [
+        {
+          squares: Array(9).fill(null),
+        },
+      ],
+      xIsNext: true,
+      stepNumber: 0,
+    };
+  }
+
+  jumpTo(step: number) {
+    this.setState({
+      stepNumber: step,
+      xIsNext: step % 2 === 0,
+    });
+  }
+
+  handleClick(i: number): void {
+    const history = this.state.history.slice(0, this.state.stepNumber + 1);
+    const current = history[history.length - 1];
+    const squares = current.squares.slice();
+    if (calculateWinner(squares) || squares[i]) {
+      return;
+    }
+    squares[i] = this.state.xIsNext ? 'x' : 'O';
+    this.setState({
+      history: history.concat([
+        {
+          squares: squares,
+        },
+      ]),
+      xIsNext: !this.state.xIsNext,
+      stepNumber: history.length,
+    });
+  }
+
   render() {
+    const history = this.state.history;
+    const current = history[this.state.stepNumber];
+    const winner = calculateWinner(current.squares);
+
+    const moves = history.map((_, move) => {
+      const desc = move ? `Go to move #${move}` : `Go to game start`;
+      return (
+        <li key={move}>
+          <button onClick={() => this.jumpTo(move)}>{desc}</button>
+        </li>
+      );
+    });
+
+    let status;
+    if (winner) {
+      status = 'Winner: ' + winner;
+    } else {
+      status = 'Next player: ' + (this.state.xIsNext ? 'x' : 'O');
+    }
+
     return (
       <div className="game">
         <div className="game-board">
-          <Board />
+          <Board
+            squares={current.squares}
+            onClick={(i: number) => this.handleClick(i)}
+          />
         </div>
         <div className="game-info">
-          <div>{/* status */}</div>
-          <ol>{/* TODO */}</ol>
+          <div>{status}</div>
+          <ol>{moves}</ol>
         </div>
       </div>
     );
   }
 }
 
-ReactDOM.render(<Game />, document.getElementById('root'));
-
-const calculateWinner = (
-  squares: IBoard['state']['squares'],
-): 'x' | 'O' | null => {
+const calculateWinner = (squares: Array<SquareContent>): 'x' | 'O' | null => {
   const lines = [
     [0, 1, 2],
     [3, 4, 5],
@@ -126,3 +163,5 @@ const calculateWinner = (
   }
   return null;
 };
+
+ReactDOM.render(<Game />, document.getElementById('root'));
