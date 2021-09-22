@@ -2,7 +2,7 @@ import React, { ReactElement } from 'react';
 import ReactDOM from 'react-dom';
 import 'index.css';
 
-interface ISquare {
+type ISquare = {
   props: {
     value: string | null;
     onClick: () => void;
@@ -17,7 +17,7 @@ const Square = (props: ISquare['props']) => {
   );
 };
 
-interface IBoard {
+type IBoard = {
   props: {
     squares: Array<'x' | 'O' | null>;
     onClick: (i: number) => void;
@@ -57,7 +57,7 @@ class Board extends React.Component<IBoard['props']> {
   }
 }
 
-interface IGame {
+type IGame = {
   state: {
     history: Array<{ squares: Array<SquareContent> }>;
     xIsNext: boolean;
